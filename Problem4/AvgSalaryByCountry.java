@@ -27,45 +27,9 @@ public class AvgSalaryByCountry extends Configured implements Tool{
 
     private static final String M_OUTPUT_PATH = "/data/temp_out";
 
-    private static Map<String, Double> createMap(){
-	Map<String, Double> myMap = new HashMap<String, Double>();
-	myMap.put("U.S. dollars", 1.0);
-	myMap.put("Euros", 1.12);
-	myMap.put("British pounds sterling", 1.29);
-	myMap.put("Japanese yen", 0.009);
-	myMap.put("Chinese yuan renminbi", 0.15);
-	myMap.put("Brazilian reais", 0.25);
-	myMap.put("Indian rupees", 0.014);
-	myMap.put("Mexican pesos", 0.053);
-	myMap.put("South African rands", 0.07);
-	myMap.put("Swedish kroner", 0.11);
-	myMap.put("Australian dollars", 0.7);
-	myMap.put("Canadian dollars", 0.74);
-	myMap.put("Singapore dollars", 0.73);
-	myMap.put("Russian rubles", 0.015);
-	myMap.put("Swiss franc", 0.98);
-	myMap.put("Polish złoty", 0.26);
-	myMap.put("Bitcoin", 5141.55);
-	return myMap;
-    }
-
-    private static double parseSalary(String buf){
-	final String DELIMITER = "e";
-	if(buf.contains(DELIMITER)){
-		String[] exp = buf.split(DELIMITER);
-		if (exp.length > 2) return -1;
-		double base = new Double(exp[0]).doubleValue(); 	
-		int level = Integer.parseInt(exp[1]);
-		return base*Math.pow(10, level);
-	}else{
-		return new Double(buf).doubleValue();
-	}
-    }
-
     public static class MyMapper1 extends Mapper<Object, Text, Text, Text> {
         public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
 	
-            int find = 0;
 	    int notAva = 0;
 	    String line = value.toString();
 	    CSVReader R = new CSVReader(new StringReader(line));
@@ -73,29 +37,12 @@ public class AvgSalaryByCountry extends Configured implements Tool{
 	    String[] ParsedLine = R.readNext();
 	    R.close();
 	    String Country = ParsedLine[3].trim();
-	    String Currency_type = ParsedLine[79].trim();
 	    String Salary = ParsedLine[152].trim();
-	    if(Country.equals("NA") || Currency_type.equals("NA") || Salary.equals("NA")) notAva = 1;
+	    if(Country.equals("NA") || Salary.equals("NA") || Salary.equals("Salary")) notAva = 1;
 	    if(notAva != 1){
-	    	Map<String, Double> CurrMap = createMap();
-	    	Set set = CurrMap.entrySet();
-            	Iterator iterator = set.iterator();
-            	String pattern = "";
-	    	double ratio = 0.0;
-	    	double salaryInUSD = 0.0;
-            	while(iterator.hasNext()){
-	    		Map.Entry myMap = (Map.Entry)iterator.next();
-                	pattern = myMap.getKey().toString();
-                	if(Currency_type.contains(pattern)){
-				find = 1;
-				ratio = CurrMap.get(pattern);
-				break;
-			}	
-	    	}
-	    	if(find > 0){
-			salaryInUSD = ratio*parseSalary(Salary);
-	    		context.write(new Text(Country), new Text(Double.toString(salaryInUSD)));
-            	}
+		Double salaryInUSD = Double.valueOf(Salary);
+		double t = salaryInUSD.doubleValue();
+	    	context.write(new Text(Country), new Text(Double.toString(t)));
 	    }
         }
     }
@@ -191,6 +138,7 @@ public class AvgSalaryByCountry extends Configured implements Tool{
         FileInputFormat.addInputPath(job, new Path(args[0]));
         FileOutputFormat.setOutputPath(job, new Path(M_OUTPUT_PATH));
 	job.waitForCompletion(true);
+	
 	
 	Job job2 = Job.getInstance(conf, "Job 2");
         job2.setJarByClass(AvgSalaryByCountry.class);
